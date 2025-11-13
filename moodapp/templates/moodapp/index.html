@@ -1,0 +1,103 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mood Predictor</title>
+<link rel="stylesheet" href="{% static 'moodapp/styles.css' %}">
+
+  </head>
+  <body>
+    <div class="orb orb-top-left" aria-hidden="true"></div>
+    <div class="orb orb-bottom-right" aria-hidden="true"></div>
+    <div class="container">
+      <section class="panel panel-main">
+        <header class="hero">
+          <h1 class="title">Welcome to Peach <span class="title-accent">your mood detection</span></h1>
+          <p class="subtitle">Let’s detect your mood to choose the movie you want.</p>
+        </header>
+
+        <form method="post" enctype="multipart/form-data" class="upload-form">
+          {% csrf_token %}
+
+          <div class="field-group">
+            {{ form.image.label_tag }}
+            {{ form.image }}
+          </div>
+
+          <input type="hidden" name="rating_preference" value="any">
+          <input type="hidden" name="tone_preference" value="match">
+
+          <button class="btn" type="submit">Start Mood Detection</button>
+        </form>
+
+        {% if service_error %}
+          <div class="notice notice-error">{{ service_error }}</div>
+        {% endif %}
+
+        {% if uploaded_file_url or prediction or recommendations.movies %}
+          <div class="panel-divider"></div>
+          <div class="results">
+            {% if uploaded_file_url %}
+              <div class="preview-wrapper">
+                <h2 class="section-title">Uploaded Photo</h2>
+                <img src="{{ uploaded_file_url }}" alt="Uploaded photo" class="preview">
+              </div>
+            {% endif %}
+
+            {% if prediction %}
+              <div class="prediction">
+                <h2 class="section-title">Mood Detection</h2>
+                <p class="mood-line">Peach sensed: <span class="badge badge-mood">{{ prediction.mood }}</span></p>
+                {% if prediction.confidence %}
+                  <p class="confidence">Confidence: {{ prediction.confidence|floatformat:2 }}</p>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            {% if recommendations.movies %}
+              <div class="recommendations">
+                <h2 class="section-title">Movies picked just for you</h2>
+                <ul class="movie-list">
+                  {% for movie in recommendations.movies %}
+                    <li class="movie-card">
+                      <div class="movie-header">
+                        <div class="movie-title-wrap">
+                          <span class="movie-title">{{ movie.title }}</span>
+                          {% if movie.year %}
+                            <span class="movie-year">{{ movie.year }}</span>
+                          {% endif %}
+                        </div>
+                        {% if movie.rating %}
+                          <span class="badge badge-rating">{{ movie.rating }}</span>
+                        {% endif %}
+                      </div>
+                      <div class="movie-metrics">
+                        <span class="metric">
+                          <span class="metric-label">Mood match</span>
+                          <span class="metric-value">{{ movie.mood|default:prediction.mood }}</span>
+                        </span>
+                        <span class="metric">
+                          <span class="metric-label">Match score</span>
+                          <span class="metric-value">{{ movie.match_score|default:movie.score|default:"N/A" }}</span>
+                        </span>
+                      </div>
+                      {% if movie.reason %}
+                        <p class="movie-reason">{{ movie.reason }}</p>
+                      {% elif movie.overview %}
+                        <p class="movie-reason">{{ movie.overview }}</p>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            {% elif prediction and not service_error %}
+              <p class="empty-state">Waiting on the recommendation service… try again with another vibe if nothing appears.</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </body>
+  </html>
